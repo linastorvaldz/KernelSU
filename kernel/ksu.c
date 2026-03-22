@@ -5,6 +5,9 @@
 #include <linux/sched.h>
 #include <linux/workqueue.h>
 #include <linux/moduleparam.h>
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+#endif // #ifdef CONFIG_KSU_SUSFS
 
 #include "allowlist.h"
 #include "app_profile.h"
@@ -12,7 +15,12 @@
 #include "klog.h" // IWYU pragma: keep
 #include "manager.h"
 #include "throne_tracker.h"
+#ifndef CONFIG_KSU_SUSFS
 #include "syscall_hook_manager.h"
+#else
+#include "setuid_hook.h"
+#include "sucompat.h"
+#endif // #ifndef CONFIG_KSU_SUSFS
 #include "ksud.h"
 #include "supercalls.h"
 #include "ksu.h"
@@ -111,9 +119,19 @@ int __init kernelsu_init(void)
         ksu_allowlist_init();
         ksu_load_allow_list();
 
+#ifndef CONFIG_KSU_SUSFS
         ksu_syscall_hook_manager_init();
+#else
+        ksu_setuid_hook_init();
+        ksu_sucompat_init();
+#endif // #ifndef CONFIG_KSU_SUSFS
 
         ksu_throne_tracker_init();
+
+#ifdef CONFIG_KSU_SUSFS
+        susfs_init();
+#endif // #ifdef CONFIG_KSU_SUSFS
+
         ksu_observer_init();
         ksu_file_wrapper_init();
 
@@ -126,13 +144,24 @@ int __init kernelsu_init(void)
         }
 
     } else {
+#ifndef CONFIG_KSU_SUSFS
         ksu_syscall_hook_manager_init();
+#else
+        ksu_setuid_hook_init();
+        ksu_sucompat_init();
+#endif // #ifndef CONFIG_KSU_SUSFS
 
         ksu_allowlist_init();
 
         ksu_throne_tracker_init();
 
+#ifdef CONFIG_KSU_SUSFS
+        susfs_init();
+#endif // #ifdef CONFIG_KSU_SUSFS
+
+#ifndef CONFIG_KSU_SUSFS
         ksu_ksud_init();
+#endif // #ifndef CONFIG_KSU_SUSFS
 
         ksu_file_wrapper_init();
     }
@@ -154,10 +183,12 @@ void kernelsu_exit(void)
 
     ksu_observer_exit();
 
+#ifndef CONFIG_KSU_SUSFS
     if (!ksu_late_loaded)
         ksu_ksud_exit();
 
     ksu_syscall_hook_manager_exit();
+#endif // #ifndef CONFIG_KSU_SUSFS
 
     ksu_supercalls_exit();
 

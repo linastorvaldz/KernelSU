@@ -117,6 +117,13 @@ void apply_kernelsu_rules()
     ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
     ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
+#ifdef CONFIG_KSU_SUSFS
+    susfs_set_priv_app_sid();
+    susfs_set_init_sid();
+    susfs_set_ksu_sid();
+    susfs_set_zygote_sid();
+#endif // #ifdef CONFIG_KSU_SUSFS
+
     rcu_assign_pointer(selinux_state.policy, pol);
     synchronize_rcu();
     ksu_destroy_sepolicy(old_pol);
