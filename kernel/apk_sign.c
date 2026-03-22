@@ -360,12 +360,24 @@ bool is_manager_apk(char *path)
         return false;
     }
 #endif
-    if (check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH)) {
-        return true;
+    const char *p = KSU_MANAGER_LIST;
+
+    while (*p) {
+        unsigned int size;
+	char hash[65] = {0};
+
+	if (sscanf(p, "%x:%64[^,]", &size, hash) == 2) {
+	    if (check_v2_signature(path, size, hash)) {
+	        pr_info("KernelSU: matched manager APK: %s (size=0x%x, hash=%s)\n", path, size, hash);
+		return true;
+	    }
+        }
+
+	p = strchr(p, ',');
+	if (!p)
+	    break;
+	p++; // skip comma
     }
-#ifdef EXPECTED_SIZE2
-    return check_v2_signature(path, EXPECTED_SIZE2, EXPECTED_HASH2);
-#else
+
     return false;
-#endif
 }
